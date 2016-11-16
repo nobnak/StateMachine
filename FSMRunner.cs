@@ -47,8 +47,8 @@ namespace StateMachine {
                 state = _stateMap [name] = new StateData (name);
             return state;
         }
-        public StateData CurrentState { get { return _current; } }
-        public StateData LastState { get { return _last; } }
+        public T Current { get { return (_current == null ? default(T) : _current.name); } }
+        public T Last { get { return (_last == null ? default(T) : _last.name); } }
 
         public FSM<T> Goto(T nextStateName) {
             StateData next;
