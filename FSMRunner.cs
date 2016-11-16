@@ -91,15 +91,15 @@ namespace StateMachine {
                 this.name = name;
             }
 
-            public State SetEnter(System.Action<FSM<T>> enter) {
+            public State Enter(System.Action<FSM<T>> enter) {
                 this._enter = enter;
                 return this;
             }
-            public State SetUpdate(System.Action<FSM<T>> update) {
+            public State Update(System.Action<FSM<T>> update) {
                 this._update = update;
                 return this;
             }
-            public State SetExit(System.Action<FSM<T>> exit) {
+            public State Exit(System.Action<FSM<T>> exit) {
                 this._exit = exit;
                 return this;
             }
