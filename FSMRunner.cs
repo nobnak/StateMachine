@@ -29,11 +29,11 @@ namespace StateMachine {
         void Update();
     }
     public class FSM<T> : System.IDisposable, IFSM where T : struct {
-        Dictionary<T, State> _stateMap = new Dictionary<T, State>();
+        Dictionary<T, StateData> _stateMap = new Dictionary<T, StateData>();
 
         FSMRunner _runner;
-        State _current;
-        State _last;
+        StateData _current;
+        StateData _last;
 
         public FSM(MonoBehaviour target) {
             if ((_runner = target.GetComponent<FSMRunner> ()) == null)
@@ -41,17 +41,17 @@ namespace StateMachine {
             _runner.Add (this);
         }
 
-        public State Ensure(T name) {
-            State state;
+        public StateData State(T name) {
+            StateData state;
             if (!TryGetState (name, out state))
-                state = _stateMap [name] = new State (name);
+                state = _stateMap [name] = new StateData (name);
             return state;
         }
-        public State CurrentState { get { return _current; } }
-        public State LastState { get { return _last; } }
+        public StateData CurrentState { get { return _current; } }
+        public StateData LastState { get { return _last; } }
 
         public FSM<T> Goto(T nextStateName) {
-            State next;
+            StateData next;
             if (!TryGetState (nextStateName, out next) || next == null) {
                 Debug.LogWarningFormat ("There is no state {0}", nextStateName);
                 return this;
@@ -67,7 +67,7 @@ namespace StateMachine {
             if (_current != null)
                 _current.UpdateState (this);
         }
-        public bool TryGetState(T name, out State state) {
+        public bool TryGetState(T name, out StateData state) {
             return _stateMap.TryGetValue (name, out state);
         }
 
@@ -80,41 +80,41 @@ namespace StateMachine {
         }
         #endregion
 
-        public class State { 
+        public class StateData { 
             public readonly T name;
 
             System.Action<FSM<T>> _enter;
             System.Action<FSM<T>> _update;
             System.Action<FSM<T>> _exit;
 
-            public State(T name) {
+            public StateData(T name) {
                 this.name = name;
             }
 
-            public State Enter(System.Action<FSM<T>> enter) {
+            public StateData Enter(System.Action<FSM<T>> enter) {
                 this._enter = enter;
                 return this;
             }
-            public State Update(System.Action<FSM<T>> update) {
+            public StateData Update(System.Action<FSM<T>> update) {
                 this._update = update;
                 return this;
             }
-            public State Exit(System.Action<FSM<T>> exit) {
+            public StateData Exit(System.Action<FSM<T>> exit) {
                 this._exit = exit;
                 return this;
             }
 
-            public State EnterState(FSM<T> fsm) {
+            public StateData EnterState(FSM<T> fsm) {
                 if (_enter != null)
                     _enter (fsm);
                 return this;
             }
-            public State UpdateState(FSM<T> fsm) {
+            public StateData UpdateState(FSM<T> fsm) {
                 if (_update != null)
                     _update (fsm);
                 return this;
             }
-            public State ExitState(FSM<T> fsm) {
+            public StateData ExitState(FSM<T> fsm) {
                 if (_exit != null)
                     _exit (fsm);
                 return this;
