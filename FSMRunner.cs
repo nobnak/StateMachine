@@ -34,6 +34,8 @@ namespace StateMachine {
         FSMRunner _runner;
         StateData _current;
         StateData _last;
+        bool _nextStateQueued;
+        T _nextStateName;
 
         public FSM(MonoBehaviour target) {
             if ((_runner = target.GetComponent<FSMRunner> ()) == null)
@@ -51,6 +53,11 @@ namespace StateMachine {
         public T Last { get { return (_last == null ? default(T) : _last.name); } }
 
         public FSM<T> Goto(T nextStateName) {
+            _nextStateQueued = true;
+            _nextStateName = nextStateName;
+            return this;
+        }
+        public FSM<T> GotoImmediate(T nextStateName) {
             StateData next;
             if (!TryGetState (nextStateName, out next) || next == null) {
                 Debug.LogWarningFormat ("There is no state {0}", nextStateName);
@@ -64,6 +71,10 @@ namespace StateMachine {
             return this;
         }
         public void Update() {
+            if (_nextStateQueued) {
+                _nextStateQueued = false;
+                GotoImmediate (_nextStateName);
+            }
             if (_current != null)
                 _current.UpdateState (this);
         }
