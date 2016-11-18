@@ -1,4 +1,4 @@
-# FSM for Unity
+# FSM(Finite State Machine) for Unity
 
 ## Usage
 ######Add this as a submodule
