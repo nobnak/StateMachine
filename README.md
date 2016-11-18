@@ -13,6 +13,7 @@ enum State { Idol, Walk, Run, Sleep, Eat }
 ```cs
 FSM<State> fsm = new FSM<State>(thisMonoBehaviour);
 fsm.State(State.Idol).Enter((fsm) => { ... }).Update((fsm) => { ... }).Exit((fsm)=> { ... });
+fsm.State(State.Walk)...
 ```
 ######Start FSM
 ```cs
