@@ -1,10 +1,6 @@
 # FSM(Finite State Machine) for Unity
 
 ## Usage
-######Add this as a submodule
-```
-git submodule add git@github.com:nobnak/StateMachine.git Assets/Packages/StateMachine
-```
 ######Declare states
 ```cs
 enum State { Idol, Walk, Run, Sleep, Eat }
@@ -18,4 +14,10 @@ fsm.State(State.Walk) ...
 ######Start FSM
 ```cs
 fsm.Goto(State.Idol);
+```
+
+## Git Submodule
+######Add this as a submodule
+```
+git submodule add git@github.com:nobnak/StateMachine.git Assets/Packages/StateMachine
 ```
