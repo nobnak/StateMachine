@@ -31,6 +31,7 @@ namespace StateMachine {
     public class FSM<T> : System.IDisposable, IFSM where T : struct {
         Dictionary<T, StateData> _stateMap = new Dictionary<T, StateData>();
 
+        bool _enabled;
         FSMRunner _runner;
         StateData _current;
         StateData _last;
@@ -41,6 +42,7 @@ namespace StateMachine {
             if ((_runner = target.GetComponent<FSMRunner> ()) == null)
                 _runner = target.gameObject.AddComponent<FSMRunner> ();
             _runner.Add (this);
+            _enabled = true;
         }
 
         public StateData State(T name) {
@@ -51,6 +53,10 @@ namespace StateMachine {
         }
         public T Current { get { return (_current == null ? default(T) : _current.name); } }
         public T Last { get { return (_last == null ? default(T) : _last.name); } }
+        public bool Enabled {
+            get { return _enabled; }
+            set { _enabled = value; }
+        }
 
         public FSM<T> Goto(T nextStateName) {
             _nextStateQueued = true;
@@ -71,6 +77,8 @@ namespace StateMachine {
             return this;
         }
         public void Update() {
+            if (!_enabled)
+                return;
             if (_nextStateQueued) {
                 _nextStateQueued = false;
                 GotoImmediate (_nextStateName);
