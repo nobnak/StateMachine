@@ -28,7 +28,7 @@ namespace StateMachine {
     public interface IFSM {
         void Update();
     }
-    public class FSM<T> : System.IDisposable, IFSM where T : struct {
+    public class FSM<T> : System.IDisposable, IFSM where T : struct, System.IComparable {
         Dictionary<T, StateData> _stateMap = new Dictionary<T, StateData>();
 
         bool _enabled;
@@ -59,6 +59,14 @@ namespace StateMachine {
         }
 
         public FSM<T> Goto(T nextStateName) {
+            if (_current != null && _current.name.CompareTo(nextStateName) == 0) {
+                Debug.LogFormat ("It's already in the desired state {0}", nextStateName);
+                return this;
+            }
+            if (_nextStateQueued && _nextStateName.CompareTo (nextStateName) == 0) {
+                Debug.LogFormat ("The desired state is already queued {0}", nextStateName);
+                return this;
+            }
             _nextStateQueued = true;
             _nextStateName = nextStateName;
             return this;
