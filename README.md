@@ -19,5 +19,5 @@ fsm.Goto(State.Idol);
 ## Git Submodule
 ######Add this as a submodule
 ```
-git submodule add git@github.com:nobnak/StateMachine.git Assets/Packages/StateMachine
+git submodule add https://github.com/nobnak/StateMachine.git Assets/Packages/StateMachine
 ```
