@@ -58,18 +58,18 @@ namespace StateMachine {
             set { _enabled = value; }
         }
 
-        public FSM<T> Goto(T nextStateName) {
+        public bool Goto(T nextStateName) {
             if (_current != null && _current.name.CompareTo(nextStateName) == 0) {
                 Debug.LogFormat ("It's already in the desired state {0}", nextStateName);
-                return this;
+                return false;
             }
-            if (_nextStateQueued && _nextStateName.CompareTo (nextStateName) == 0) {
-                Debug.LogFormat ("The desired state is already queued {0}", nextStateName);
-                return this;
+            if (_nextStateQueued) {
+                Debug.LogFormat ("The next state is already queued {0}", nextStateName);
+                return false;
             }
             _nextStateQueued = true;
             _nextStateName = nextStateName;
-            return this;
+            return true;
         }
         public FSM<T> GotoImmediate(T nextStateName) {
             StateData next;
