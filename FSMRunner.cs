@@ -60,11 +60,11 @@ namespace StateMachine {
 
         public bool Goto(T nextStateName) {
             if (_current != null && _current.name.CompareTo(nextStateName) == 0) {
-                Debug.LogFormat ("It's already in the desired state {0}", nextStateName);
+                //Debug.LogFormat ("It's already in the desired state {0}", nextStateName);
                 return false;
             }
             if (_nextStateQueued) {
-                Debug.LogFormat ("The next state is already queued {0}", nextStateName);
+                //Debug.LogFormat ("The next state is already queued {0}", nextStateName);
                 return false;
             }
             _nextStateQueued = true;
