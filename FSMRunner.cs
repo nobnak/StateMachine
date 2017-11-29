@@ -29,6 +29,8 @@ namespace StateMachine {
         void Update();
     }
     public class FSM<T> : System.IDisposable, IFSM where T : struct, System.IComparable {
+        public enum TransitionModeEnum { Queued = 0, Immediate }
+
         Dictionary<T, StateData> _stateMap = new Dictionary<T, StateData>();
 
         bool _enabled;
@@ -37,15 +39,18 @@ namespace StateMachine {
         StateData _last;
         bool _nextStateQueued;
         T _nextStateName;
+        TransitionModeEnum transitionMode;
 
-        public FSM(MonoBehaviour target) {
+        public FSM(MonoBehaviour target, TransitionModeEnum transitionMode) {
             if ((_runner = target.GetComponent<FSMRunner> ()) == null)
                 _runner = target.gameObject.AddComponent<FSMRunner> ();
             _runner.Add (this);
             _enabled = true;
+            this.transitionMode = transitionMode;
         }
+        public FSM(MonoBehaviour target):this(target, TransitionModeEnum.Queued) { }
 
-        public StateData State(T name) {
+            public StateData State(T name) {
             StateData state;
             if (!TryGetState (name, out state))
                 state = _stateMap [name] = new StateData (name);
@@ -59,15 +64,21 @@ namespace StateMachine {
         }
 
         public FSM<T> Goto(T nextStateName) {
+            switch (transitionMode) {
+                default:
+                    return GotoQueued(nextStateName);
+                case TransitionModeEnum.Immediate:
+                    return GotoImmediate(nextStateName);
+            }
+        }
+        public FSM<T> GotoQueued(T nextStateName) { 
             if (_current != null && _current.name.CompareTo(nextStateName) == 0) {
-                //Debug.LogFormat ("It's already in the desired state {0}", nextStateName);
                 return this;
             }
-            if (_nextStateQueued && _nextStateName.CompareTo(nextStateName) == 0) {
-                //Debug.LogFormat ("The next state is already queued {0}", nextStateName);
-                return this;
-            }
+            if (_nextStateQueued)
+                Debug.LogFormat ("The next state is already queued {0}", nextStateName);
             _nextStateQueued = true;
+
             _nextStateName = nextStateName;
             return this;
         }
