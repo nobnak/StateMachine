@@ -37,9 +37,11 @@ namespace StateMachine {
         FSMRunner _runner;
         StateData _current;
         StateData _last;
-        bool _nextStateQueued;
-        T _nextStateName;
         TransitionModeEnum transitionMode;
+
+        bool _queueInProcess;
+        T _lastQueuedStateName;
+        Queue<T> nextStateNameQueue;
 
         public FSM(MonoBehaviour target, TransitionModeEnum transitionMode) {
             if ((_runner = target.GetComponent<FSMRunner> ()) == null)
@@ -47,6 +49,7 @@ namespace StateMachine {
             _runner.Add (this);
             _enabled = true;
             this.transitionMode = transitionMode;
+            this.nextStateNameQueue = new Queue<T>();
         }
         public FSM(MonoBehaviour target):this(target, TransitionModeEnum.Queued) { }
 
@@ -71,40 +74,29 @@ namespace StateMachine {
                     return GotoImmediate(nextStateName);
             }
         }
-        public FSM<T> GotoQueued(T nextStateName) { 
-            if (_current != null && _current.name.CompareTo(nextStateName) == 0) {
-                return this;
-            }
-            if (_nextStateQueued)
-                Debug.LogFormat ("The next state is already queued {0}", nextStateName);
-            _nextStateQueued = true;
+        public FSM<T> GotoQueued(T nextStateName) {
+            if (nextStateNameQueue.Count > 0)
+                Debug.LogFormat("The next state is already queued {0}", nextStateName);
 
-            _nextStateName = nextStateName;
+            Enqueue(nextStateName);
             return this;
         }
         public FSM<T> GotoImmediate(T nextStateName) {
-            StateData next;
-            if (!TryGetState (nextStateName, out next) || next == null) {
-                Debug.LogWarningFormat ("There is no state {0}", nextStateName);
-                return this;
-            }
-            _last = _current;
-            _current = next;
-            if (_last != null)
-                _last.ExitState (this);
-            _current.EnterState (this);
+            Enqueue(nextStateName);
+            _GotoInQueue();
             return this;
         }
+
         public void Update() {
             if (!_enabled)
                 return;
-            if (_nextStateQueued) {
-                _nextStateQueued = false;
-                GotoImmediate (_nextStateName);
-            }
+
+            _GotoInQueue();
+
             if (_current != null)
-                _current.UpdateState (this);
+                _current.UpdateState(this);
         }
+
         public bool TryGetState(T name, out StateData state) {
             return _stateMap.TryGetValue (name, out state);
         }
@@ -118,6 +110,48 @@ namespace StateMachine {
         }
         #endregion
 
+        protected void _Goto(T nextStateName) {
+            StateData next;
+            if (!TryGetState(nextStateName, out next) || next == null) {
+                Debug.LogWarningFormat("There is no state {0}", nextStateName);
+                return;
+            }
+            _last = _current;
+            _current = next;
+            if (_last != null)
+                _last.ExitState(this);
+            _current.EnterState(this);
+            return;
+        }
+        protected void _GotoInQueue() {
+            if (_queueInProcess)
+                return;
+            _queueInProcess = true;
+
+            while (nextStateNameQueue.Count > 0) {
+                var next = nextStateNameQueue.Dequeue();
+                _Goto(next);
+            }
+
+            _queueInProcess = false;
+        }
+        protected void Enqueue(T nextStateName) {
+            T last;
+            if (!TryGetLastFromQueue(out last) || last.CompareTo(nextStateName) != 0) {
+                _lastQueuedStateName = nextStateName;
+                nextStateNameQueue.Enqueue(nextStateName);
+            }
+        }
+        protected bool TryGetLastFromQueue(out T last) {
+            last = default(T);
+
+            var result = nextStateNameQueue.Count > 0;
+            if (result)
+                last = _lastQueuedStateName;
+            return result;
+        }
+
+        #region Classes
         public class StateData { 
             public readonly T name;
 
@@ -158,5 +192,6 @@ namespace StateMachine {
                 return this;
             }
         }
+        #endregion
     }
 }
