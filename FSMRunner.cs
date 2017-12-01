@@ -28,27 +28,35 @@ namespace StateMachine {
     public interface IFSM {
         void Update();
     }
-    public class FSM<T> : System.IDisposable, IFSM where T : struct, System.IComparable {
+    public abstract class FSM : System.IDisposable, IFSM {
         public enum TransitionModeEnum { Queued = 0, Immediate }
 
+        protected TransitionModeEnum transitionMode;
+
+        public FSM(TransitionModeEnum transitionMode) {
+            this.transitionMode = transitionMode;
+        }
+
+        public abstract void Dispose();
+        public abstract void Update();
+    }
+    public class FSM<T> : FSM where T : struct, System.IComparable {
         Dictionary<T, StateData> _stateMap = new Dictionary<T, StateData>();
 
         bool _enabled;
         FSMRunner _runner;
         StateData _current;
         StateData _last;
-        TransitionModeEnum transitionMode;
 
         bool _queueInProcess;
         T _lastQueuedStateName;
         Queue<T> nextStateNameQueue;
 
-        public FSM(MonoBehaviour target, TransitionModeEnum transitionMode) {
+        public FSM(MonoBehaviour target, TransitionModeEnum transitionMode) : base(transitionMode) {
             if ((_runner = target.GetComponent<FSMRunner> ()) == null)
                 _runner = target.gameObject.AddComponent<FSMRunner> ();
             _runner.Add (this);
             _enabled = true;
-            this.transitionMode = transitionMode;
             this.nextStateNameQueue = new Queue<T>();
         }
         public FSM(MonoBehaviour target):this(target, TransitionModeEnum.Queued) { }
@@ -87,7 +95,7 @@ namespace StateMachine {
             return this;
         }
 
-        public void Update() {
+        public override void Update() {
             if (!_enabled)
                 return;
 
@@ -102,7 +110,7 @@ namespace StateMachine {
         }
 
         #region IDisposable implementation
-        public void Dispose () {
+        public override void Dispose () {
             if (_runner != null) {
                 _runner.Remove (this);
                 _runner = null;
