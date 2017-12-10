@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace StateMachine {
+namespace Blending.StateMachine {
 
     public class FSMRunner : MonoBehaviour {
         List<IFSM> _fsmlist = new List<IFSM>();
