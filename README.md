@@ -1,23 +1,34 @@
-# FSM(Finite State Machine) for Unity
+# Minimal State Machine for Unity
 
-## Usage
-##### Declare states
-```cs
-enum State { Idol, Walk, Run, Sleep, Eat }
-```
-###### Implement states
-```cs
-FSM<State> fsm = new FSM<State>(thisMonoBehaviour);
-fsm.State(State.Idol).Enter((fsm) => { ... }).Update((fsm) => { ... }).Exit((fsm)=> { ... });
-fsm.State(State.Walk) ...
-```
-###### Start FSM
-```cs
-fsm.Goto(State.Idol);
-```
+- [Sample Project](https://github.com/nobnak/StateMachineTest)
 
-## Git Submodule
-###### Add this as a submodule
-```
-git submodule add https://github.com/nobnak/StateMachine.git Assets/Packages/StateMachine
+## Example
+```cs
+enum StateEnum { Init = 0, Started, Finished }
+StateMachine<StateEnum> fsm;
+
+void OnEnable() {
+    fsm = new StateMachine<StateEnum>();
+
+    // States
+    fsm.State(StateEnum.Init)
+      .Update(() => {
+          if (clicked)
+              fsm.Change(StateEnum.Started);
+      });
+
+    fsm.State(StateEnum.Started)
+      .Enter(() => Debug.Log("Started"))
+      .Update(() => fsm.Change(StateEnum.Finished));
+
+    fsm.State(StateEnum.Finished)
+      .Enter(() => Debug.Log("Finished"));
+      
+    // Wire
+    fsm.Wire(StateEnum.Init, StateEnum.Started)
+      .Wire(StateEnum.Finished);
+}
+void Update() {
+    fsm.Update();
+}
 ```
