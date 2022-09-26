@@ -8,22 +8,25 @@ namespace StateMashineSys {
 
         public event System.Action<System.Exception> Unhandled;
 
-        public Dictionary<TStateEnum, CState> StateMap { get; } = new Dictionary<TStateEnum, CState>();
-        public Dictionary<(TStateEnum s0, TStateEnum s1), CWire> WireMap { get; } = new Dictionary<(TStateEnum, TStateEnum), CWire>();
-
         public UpdateSequenceEnum UpdateSeq { get; protected set; }
         public bool Overwrite { get; set; } = false;
-        public IState CurrState { get; protected set; }
-        public IState NextState { get; protected set; }
+
+        public Dictionary<TStateEnum, CState> _StateMap { get; } = new Dictionary<TStateEnum, CState>();
+        public Dictionary<(TStateEnum s0, TStateEnum s1), CWire> _WireMap { get; } = new Dictionary<(TStateEnum, TStateEnum), CWire>();
+
+        public TStateEnum CurrState { get => _Curr != null ? _Curr.Target : default; }
+        public TStateEnum NextState { get => _Next != null ? _Next.Target : default; }
+        public IState _Curr { get; protected set; }
+        public IState _Next { get; protected set; }
 
         public StateBuilder<CState> State(TStateEnum state) {
-            if (!StateMap.TryGetValue(state, out var cstate)) cstate = StateMap[state] = new CState(state);
+            if (!_StateMap.TryGetValue(state, out var cstate)) cstate = _StateMap[state] = new CState(state);
             return new StateBuilder<CState>(cstate);
         }
 
         public WireBuilder<CWire> Wire(TStateEnum start, TStateEnum goal) {
-            if (!WireMap.TryGetValue((start, goal), out var cwire))
-                cwire = WireMap[(start, goal)] = new CWire(start, goal);
+            if (!_WireMap.TryGetValue((start, goal), out var cwire))
+                cwire = _WireMap[(start, goal)] = new CWire(start, goal);
             return new WireBuilder<CWire>(cwire);
         }
 
@@ -31,41 +34,41 @@ namespace StateMashineSys {
             if (UpdateSeq == UpdateSequenceEnum.Exit)
                 throw new InvalidOperationException("Cannnot call from Exit()");
 
-            if (NextState != null && !Overwrite)
+            if (_Next != null && !Overwrite)
                 return false;
 
-            if (CurrState != null 
-                && WireMap.TryGetValue((CurrState.Target, next), out var wire)
+            if (_Curr != null 
+                && _WireMap.TryGetValue((_Curr.Target, next), out var wire)
                 && (wire.Condition == null || wire.Condition()))
                 return false;
 
-            if (!StateMap.TryGetValue(next, out var goal))
+            if (!_StateMap.TryGetValue(next, out var goal))
                 throw new InvalidProgramException($"State({next}) not registered");
 
-            NextState = goal;
+            _Next = goal;
             return true;
         }
         public void Update() {
             lock (this) {
                 try {
-                    if (NextState != null) {
+                    if (_Next != null) {
                         do {
                             UpdateSeq = UpdateSequenceEnum.Exit;
-                            CurrState?.Exit?.Invoke();
+                            _Curr?.Exit?.Invoke();
 
-                            CurrState = NextState;
-                            NextState = null;
+                            _Curr = _Next;
+                            _Next = null;
 
                             UpdateSeq = UpdateSequenceEnum.Enter;
-                            CurrState?.Enter?.Invoke();
-                        } while (NextState != null);
+                            _Curr?.Enter?.Invoke();
+                        } while (_Next != null);
                     } else {
                         UpdateSeq = UpdateSequenceEnum.Update;
-                        CurrState?.Update?.Invoke();
+                        _Curr?.Update?.Invoke();
                     }
                 } catch (System.Exception e) {
-                    if (CurrState != null && CurrState.Handle != null)
-                        CurrState.Handle.Invoke(e);
+                    if (_Curr != null && _Curr.Handle != null)
+                        _Curr.Handle.Invoke(e);
                     else
                         Unhandled?.Invoke(e);
                 } finally {
