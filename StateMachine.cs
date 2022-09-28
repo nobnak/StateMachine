@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using static TestSwitch;
 
-namespace StateMashineSys {
+namespace MinimalStateMashine {
 
 	public class StateMachine<TStateEnum> : StateMachine<TStateEnum, CState<TStateEnum>, CWire<TStateEnum>> {
 
