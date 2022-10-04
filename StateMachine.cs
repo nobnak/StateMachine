@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace MinimalStateMashine {
 
@@ -45,20 +45,25 @@ namespace MinimalStateMashine {
 
         public bool Change(TStateEnum next) {
             if (UpdateSeq == UpdateSequenceEnum.Exit)
-                throw new InvalidOperationException("Cannnot call from Exit()");
+                throw new System.InvalidOperationException("Cannnot call from Exit()");
 
-            if (_Next != null && !Overwrite)
-                return false;
+			if (_Next != null && !Overwrite) {
+				Debug.LogWarning($"Next state is alerady set and override is not permitted.");
+				return false;
+			}
 
-            if (!(
-				_Curr == null 
-                || (_WireMap.TryGetValue((_Curr.Target, next), out var wire)
-					&& (wire.Condition == null || wire.Condition()))
-				))
-                return false;
+			if (_Curr != null) {
+				if (!_WireMap.TryGetValue((_Curr.Target, next), out var wire)) {
+					Debug.LogWarning($"Wire ({_Curr.Target}->{next}) is not declared.");
+					return false;
+				} else if (wire.Condition != null && !wire.Condition()) {
+					Debug.LogWarning($"Wire ({wire}) condition not satisfied.");
+					return false;
+				}
+			}
 
             if (!_StateMap.TryGetValue(next, out var goal))
-                throw new InvalidProgramException($"State({next}) not registered");
+                throw new System.InvalidProgramException($"State({next}) not registered");
 
             _Next = goal;
             return true;
