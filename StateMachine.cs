@@ -43,9 +43,42 @@ namespace MinimalStateMashine {
             return new WireBuilder<TStateEnum, TState, TWire>(this, cwire);
         }
 
-        public bool Change(TStateEnum next) {
-            if (UpdateSeq == UpdateSequenceEnum.Exit)
-                throw new System.InvalidOperationException("Cannnot call from Exit()");
+        public bool Request(TStateEnum next) {
+			lock(this)
+				return _Request(next);
+		}
+
+		public bool Transit(TStateEnum next) {
+			lock (this) {
+				var res = _Request(next);
+				if (res) _TransitStates();
+				return res;
+			}
+		}
+        public void Update() {
+			lock (this) {
+				try {
+					if (_Next != null) {
+						_TransitStates();
+					} else {
+						UpdateSeq = UpdateSequenceEnum.Update;
+						_Curr?.Update?.Invoke();
+					}
+				} catch (System.Exception e) {
+					if (_Curr != null && _Curr.Handle != null)
+						_Curr.Handle.Invoke(e);
+					else
+						Unhandled?.Invoke(e);
+				} finally {
+					UpdateSeq = default;
+				}
+			}
+        }
+
+		#region methods
+		private bool _Request(TStateEnum next) {
+			if (UpdateSeq == UpdateSequenceEnum.Exit)
+				throw new System.InvalidOperationException("Cannnot call from Exit()");
 
 			if (_Next != null && !Overwrite) {
 				Debug.LogWarning($"Next state is alerady set and override is not permitted.");
@@ -62,40 +95,25 @@ namespace MinimalStateMashine {
 				}
 			}
 
-            if (!_StateMap.TryGetValue(next, out var goal))
-                throw new System.InvalidProgramException($"State({next}) not registered");
+			if (!_StateMap.TryGetValue(next, out var goal))
+				throw new System.InvalidProgramException($"State({next}) not registered");
 
-            _Next = goal;
-            return true;
-        }
-        public void Update() {
-            lock (this) {
-                try {
-                    if (_Next != null) {
-                        do {
-                            UpdateSeq = UpdateSequenceEnum.Exit;
-                            _Curr?.Exit?.Invoke();
+			_Next = goal;
+			return true;
+		}
+		private void _TransitStates() {
+			while (_Next != null) {
+				UpdateSeq = UpdateSequenceEnum.Exit;
+				_Curr?.Exit?.Invoke();
 
-                            _Curr = _Next;
-                            _Next = null;
+				_Curr = _Next;
+				_Next = null;
 
-                            UpdateSeq = UpdateSequenceEnum.Enter;
-                            _Curr?.Enter?.Invoke();
-                        } while (_Next != null);
-                    } else {
-                        UpdateSeq = UpdateSequenceEnum.Update;
-                        _Curr?.Update?.Invoke();
-                    }
-                } catch (System.Exception e) {
-                    if (_Curr != null && _Curr.Handle != null)
-                        _Curr.Handle.Invoke(e);
-                    else
-                        Unhandled?.Invoke(e);
-                } finally {
-                    UpdateSeq = default;
-                }
-            }
-        }
+				UpdateSeq = UpdateSequenceEnum.Enter;
+				_Curr?.Enter?.Invoke();
+			} 
+		}
+		#endregion
 	}
 
 	#region classes
