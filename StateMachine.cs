@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace MinimalStateMashine {
@@ -25,9 +26,10 @@ namespace MinimalStateMashine {
         public Dictionary<(TStateEnum s0, TStateEnum s1), TWire> _WireMap { get; } = new Dictionary<(TStateEnum, TStateEnum), TWire>();
 
         public TStateEnum CurrState { get => _Curr != null ? _Curr.Target : default; }
-        public TStateEnum NextState { get => _Next != null ? _Next.Target : default; }
         public IState<TStateEnum> _Curr { get; protected set; }
-        public IState<TStateEnum> _Next { get; protected set; }
+		public Queue<IState<TStateEnum>> _TransitionQueue { get; protected set; } = new Queue<IState<TStateEnum>>();
+
+		protected int _transitionCallDepth = -1;
 
 		public abstract TState CreateState(TStateEnum state);
 		public abstract TWire CreateWire(TStateEnum start, TStateEnum goal);
@@ -42,28 +44,23 @@ namespace MinimalStateMashine {
                 cwire = _WireMap[(start, goal)] = CreateWire(start, goal);
             return new WireBuilder<TStateEnum, TState, TWire>(this, cwire);
         }
-
-        public bool Request(TStateEnum next) {
-			lock(this)
-				return _Request(next);
-		}
-
 		public bool Transit(TStateEnum next) {
-			lock (this) {
-				var res = _Request(next);
-				if (res) _TransitStates();
-				return res;
+			var res = _Request(next);
+
+			try {
+				var depth = Interlocked.Increment(ref _transitionCallDepth);
+				if (depth == 0) _TransitStates();
+			} finally {
+				Interlocked.Decrement(ref _transitionCallDepth);
 			}
+
+			return res;
 		}
         public void Update() {
 			lock (this) {
 				try {
-					if (_Next != null) {
-						_TransitStates();
-					} else {
-						UpdateSeq = UpdateSequenceEnum.Update;
-						_Curr?.Update?.Invoke();
-					}
+					UpdateSeq = UpdateSequenceEnum.Update;
+					_Curr?.Update?.Invoke();
 				} catch (System.Exception e) {
 					if (_Curr != null && _Curr.Handle != null)
 						_Curr.Handle.Invoke(e);
@@ -80,11 +77,6 @@ namespace MinimalStateMashine {
 			if (UpdateSeq == UpdateSequenceEnum.Exit)
 				throw new System.InvalidOperationException("Cannnot call from Exit()");
 
-			if (_Next != null && !Overwrite) {
-				Debug.LogWarning($"Next state is alerady set and override is not permitted.");
-				return false;
-			}
-
 			if (_Curr != null) {
 				if (!_WireMap.TryGetValue((_Curr.Target, next), out var wire)) {
 					Debug.LogWarning($"Wire ({_Curr.Target}->{next}) is not declared.");
@@ -98,16 +90,15 @@ namespace MinimalStateMashine {
 			if (!_StateMap.TryGetValue(next, out var goal))
 				throw new System.InvalidProgramException($"State({next}) not registered");
 
-			_Next = goal;
+			_TransitionQueue.Enqueue(goal);
 			return true;
 		}
 		private void _TransitStates() {
-			while (_Next != null) {
+			while (_TransitionQueue.Count > 0) {
 				UpdateSeq = UpdateSequenceEnum.Exit;
 				_Curr?.Exit?.Invoke();
 
-				_Curr = _Next;
-				_Next = null;
+				_Curr = _TransitionQueue.Dequeue();
 
 				UpdateSeq = UpdateSequenceEnum.Enter;
 				_Curr?.Enter?.Invoke();
