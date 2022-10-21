@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
@@ -62,10 +63,7 @@ namespace MinimalStateMashine {
 					UpdateSeq = UpdateSequenceEnum.Update;
 					_Curr?.Update?.Invoke();
 				} catch (System.Exception e) {
-					if (_Curr != null && _Curr.Handle != null)
-						_Curr.Handle.Invoke(e);
-					else
-						Unhandled?.Invoke(e);
+					HandleException(e);
 				} finally {
 					UpdateSeq = default;
 				}
@@ -95,14 +93,28 @@ namespace MinimalStateMashine {
 		}
 		private void _TransitStates() {
 			while (_TransitionQueue.Count > 0) {
-				UpdateSeq = UpdateSequenceEnum.Exit;
-				_Curr?.Exit?.Invoke();
+				try {
+					UpdateSeq = UpdateSequenceEnum.Exit;
+					_Curr?.Exit?.Invoke();
+				} catch(System.Exception e) {
+					HandleException(e);
+				}
 
 				_Curr = _TransitionQueue.Dequeue();
 
-				UpdateSeq = UpdateSequenceEnum.Enter;
-				_Curr?.Enter?.Invoke();
-			} 
+				try {
+					UpdateSeq = UpdateSequenceEnum.Enter;
+					_Curr?.Enter?.Invoke();
+				} catch(System.Exception e) {
+					HandleException(e);
+				}
+			}
+		}
+		private void HandleException(Exception e) {
+			if (_Curr != null && _Curr.Handle != null)
+				_Curr.Handle.Invoke(e);
+			else
+				Unhandled?.Invoke(e);
 		}
 		#endregion
 	}
