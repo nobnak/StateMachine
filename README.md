@@ -14,12 +14,12 @@ void OnEnable() {
     fsm.State(StateEnum.Init)
       .Update(() => {
           if (clicked)
-              fsm.Change(StateEnum.Started);
+              fsm.Transit(StateEnum.Started);
       });
 
     fsm.State(StateEnum.Started)
       .Enter(() => Debug.Log("Started"))
-      .Update(() => fsm.Change(StateEnum.Finished));
+      .Update(() => fsm.Transit(StateEnum.Finished));
 
     fsm.State(StateEnum.Finished)
       .Enter(() => Debug.Log("Finished"));
@@ -27,6 +27,9 @@ void OnEnable() {
     // Wire
     fsm.Wire(StateEnum.Init, StateEnum.Started)
       .Wire(StateEnum.Finished);
+    
+    // Entry state
+    fsm.Transit(StateEnum.Init);
 }
 void Update() {
     fsm.Update();
