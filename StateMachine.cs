@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
@@ -19,6 +18,7 @@ namespace MinimalStateMashine {
 	{
 
         public event System.Action<System.Exception> Unhandled;
+		public event System.Action<TStateEnum?, TStateEnum?> Changed;
 
         public UpdateSequenceEnum UpdateSeq { get; protected set; }
         public bool Overwrite { get; set; } = false;
@@ -100,6 +100,7 @@ namespace MinimalStateMashine {
 					HandleException(e);
 				}
 
+				var prev = _Curr;
 				_Curr = _TransitionQueue.Dequeue();
 
 				try {
@@ -108,9 +109,11 @@ namespace MinimalStateMashine {
 				} catch(System.Exception e) {
 					HandleException(e);
 				}
+
+				Changed?.Invoke(prev != null ? prev.Target : default, _Curr != null ? _Curr.Target : default);
 			}
 		}
-		private void HandleException(Exception e) {
+		private void HandleException(System.Exception e) {
 			if (_Curr != null && _Curr.Handle != null)
 				_Curr.Handle.Invoke(e);
 			else
